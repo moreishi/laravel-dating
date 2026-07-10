@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Actions\StartConversationAction;
 use App\Data\StartConversationData;
-use App\Models\Conversation;
 use App\Services\ConversationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;

@@ -3,8 +3,8 @@
 namespace App\Interfaces;
 
 use App\Data\UpdateProfileData;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface ProfileRepositoryInterface
 {
