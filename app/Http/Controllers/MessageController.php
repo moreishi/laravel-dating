@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\SendMessageAction;
 use App\Models\Conversation;
+use App\Models\Message;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class MessageController extends Controller
 
     public function store(Request $request, Conversation $conversation): RedirectResponse|View
     {
-        $this->authorize('view', $conversation);
+        $this->authorize('create', [Message::class, $conversation]);
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:2000'],

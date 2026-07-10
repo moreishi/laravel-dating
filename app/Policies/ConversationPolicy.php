@@ -9,7 +9,9 @@ class ConversationPolicy
 {
     public function view(User $user, Conversation $conversation): bool
     {
-        return $conversation->users->contains($user);
+        return $conversation->users()
+            ->where('user_id', $user->id)
+            ->exists();
     }
 
     public function create(User $user): bool

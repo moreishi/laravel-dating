@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Actions\StartConversationAction;
 use App\Data\StartConversationData;
+use App\Exceptions\CannotMessageSelfException;
+use App\Models\Conversation;
 use App\Services\ConversationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -26,16 +28,14 @@ class ConversationController extends Controller
         ]);
     }
 
-    public function show(int $id): View
+    public function show(Conversation $conversation): View
     {
-        $conversation = $this->conversationService->getConversation($id);
-
         $this->authorize('view', $conversation);
 
         $this->conversationService->markAsRead($conversation, auth()->id());
 
         return view('conversations.show', [
-            'conversation' => $conversation,
+            'conversation' => $conversation->load('users', 'messages.user'),
             'messages' => $conversation->messages()->with('user')->oldest()->get(),
         ]);
     }
@@ -46,17 +46,17 @@ class ConversationController extends Controller
             'recipient_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        if ((int) $validated['recipient_id'] === auth()->id()) {
+        try {
+            $data = StartConversationData::from($validated);
+
+            $conversation = $this->startConversationAction->execute(
+                auth()->id(),
+                $data->recipientId,
+            );
+
+            return redirect()->route('conversations.show', $conversation);
+        } catch (CannotMessageSelfException) {
             return redirect()->back()->withErrors(['recipient_id' => 'You cannot start a conversation with yourself.']);
         }
-
-        $data = StartConversationData::from($validated);
-
-        $conversation = $this->startConversationAction->execute(
-            auth()->id(),
-            $data->recipientId,
-        );
-
-        return redirect()->route('conversations.show', $conversation);
     }
 }
