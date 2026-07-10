@@ -10,7 +10,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @forelse ($profiles as $profile)
                     <div class="bg-white rounded-lg shadow p-6">
-                        <h3 class="text-lg font-semibold text-gray-900">{{ $profile->name }}</h3>
+                        <a href="{{ route('profiles.show', $profile->id) }}" class="text-lg font-semibold text-gray-900 hover:text-rose-600">
+                            {{ $profile->name }}
+                        </a>
                         <p class="text-gray-600 text-sm mt-1">
                             {{ $profile->age ?? 'N/A' }} years old
                             @if ($profile->gender)
