@@ -29,7 +29,7 @@
                         @csrf
                         <div class="flex gap-3">
                             <textarea name="content" rows="1" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-rose-500 focus:ring-rose-500" placeholder="{{ __('Type your message...') }}" required maxlength="2000"></textarea>
-                            <button type="submit" class="px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600 font-medium self-end">
+                            <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 font-medium self-end">
                                 {{ __('Send') }}
                             </button>
                         </div>

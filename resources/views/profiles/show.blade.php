@@ -31,7 +31,7 @@
                     <form action="{{ route('conversations.store') }}" method="POST">
                         @csrf
                         <input type="hidden" name="recipient_id" value="{{ $profile->id }}">
-                        <button type="submit" class="inline-flex items-center px-6 py-3 bg-rose-500 text-white rounded-md hover:bg-rose-600 font-medium">
+                        <button type="submit" class="inline-flex items-center px-6 py-3 bg-rose-600 text-white rounded-md hover:bg-rose-700 font-medium">
                             {{ __('Send Message') }}
                         </button>
                     </form>
