@@ -37,7 +37,14 @@ class UserProfileController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $data = UpdateProfileData::from($request->all());
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'age' => ['required', 'integer', 'min:18', 'max:120'],
+            'bio' => ['nullable', 'string', 'max:5000'],
+            'gender' => ['nullable', 'string', 'in:male,female,other'],
+        ]);
+
+        $data = UpdateProfileData::from($validated);
 
         $this->profileService->updateProfile(auth()->id(), $data);
 

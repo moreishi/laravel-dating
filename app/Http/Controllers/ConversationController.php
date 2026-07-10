@@ -6,12 +6,15 @@ use App\Actions\StartConversationAction;
 use App\Data\StartConversationData;
 use App\Models\Conversation;
 use App\Services\ConversationService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ConversationController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         private readonly ConversationService $conversationService,
         private readonly StartConversationAction $startConversationAction,
@@ -40,7 +43,15 @@ class ConversationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = StartConversationData::from($request->all());
+        $validated = $request->validate([
+            'recipient_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        if ((int) $validated['recipient_id'] === auth()->id()) {
+            return redirect()->back()->withErrors(['recipient_id' => 'You cannot start a conversation with yourself.']);
+        }
+
+        $data = StartConversationData::from($validated);
 
         $conversation = $this->startConversationAction->execute(
             auth()->id(),
