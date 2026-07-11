@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'ConnectDate') }} — Find Your Perfect Connection</title>
+    <title>{{ config('app.name', 'LaraDate') }} — Find Your Perfect Connection</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
@@ -19,7 +19,7 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">💕</span>
-                    <span class="text-xl font-bold text-rose-600">ConnectDate</span>
+                    <span class="text-xl font-bold text-rose-600">LaraDate</span>
                 </div>
                 @if (Route::has('login'))
                     <nav class="flex items-center gap-4">
@@ -130,10 +130,10 @@
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">💕</span>
-                    <span class="text-sm font-semibold text-gray-700">ConnectDate</span>
+                    <span class="text-sm font-semibold text-gray-700">LaraDate</span>
                 </div>
                 <p class="text-sm text-gray-500">
-                    &copy; {{ date('Y') }} ConnectDate. All rights reserved.
+                    &copy; {{ date('Y') }} LaraDate. All rights reserved.
                 </p>
             </div>
         </div>
