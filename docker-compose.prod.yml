@@ -1,0 +1,145 @@
+services:
+  # ── Application (nginx + PHP-FPM) ─────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laradate-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      APP_NAME: "${APP_NAME:-LaraDate}"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: "${APP_URL:-http://localhost}"
+      APP_KEY: "${APP_KEY}"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: "${DB_DATABASE:-laradate}"
+      DB_USERNAME: "${DB_USERNAME:-laradate}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      SESSION_DRIVER: database
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      MAIL_MAILER: "${MAIL_MAILER:-log}"
+      MAIL_HOST: "${MAIL_HOST:-}"
+      MAIL_PORT: "${MAIL_PORT:-}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      MAIL_ENCRYPTION: "${MAIL_ENCRYPTION:-}"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@localhost}"
+      MAIL_FROM_NAME: "${APP_NAME:-LaraDate}"
+      LOG_LEVEL: "${LOG_LEVEL:-warning}"
+      FILESYSTEM_DISK: local
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - laradate
+
+  # ── Queue Worker ───────────────────────────────────────────────
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laradate-queue
+    restart: unless-stopped
+    entrypoint: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+    environment:
+      APP_NAME: "${APP_NAME:-LaraDate}"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: "${APP_KEY}"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: "${DB_DATABASE:-laradate}"
+      DB_USERNAME: "${DB_USERNAME:-laradate}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      LOG_LEVEL: "${LOG_LEVEL:-warning}"
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - laradate
+
+  # ── Task Scheduler ─────────────────────────────────────────────
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laradate-scheduler
+    restart: unless-stopped
+    entrypoint: ["php", "artisan", "schedule:work"]
+    environment:
+      APP_NAME: "${APP_NAME:-LaraDate}"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: "${APP_KEY}"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: "${DB_DATABASE:-laradate}"
+      DB_USERNAME: "${DB_USERNAME:-laradate}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      LOG_LEVEL: "${LOG_LEVEL:-warning}"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - laradate
+
+  # ── Database (MariaDB) ─────────────────────────────────────────
+  db:
+    image: mariadb:10.11
+    container_name: laradate-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MARIADB_DATABASE: "${DB_DATABASE:-laradate}"
+      MARIADB_USER: "${DB_USERNAME:-laradate}"
+      MARIADB_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - laradate
+
+  # ── Redis (optional — uncomment to use) ────────────────────────
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: laradate-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redisdata:/data
+  #   networks:
+  #     - laradate
+
+# ── Volumes ──────────────────────────────────────────────────────
+volumes:
+  storage:
+    driver: local
+  dbdata:
+    driver: local
+  # redisdata:
+  #   driver: local
+
+# ── Networks ─────────────────────────────────────────────────────
+networks:
+  laradate:
+    driver: bridge
