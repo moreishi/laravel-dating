@@ -29,8 +29,10 @@ ENV APP_DEBUG=false
 
 WORKDIR /var/www/html
 
-# Install PHP extensions
+# Install PHP extensions (switch to root for install-php-extensions)
+USER root
 RUN install-php-extensions pdo_mysql bcmath gd intl zip
+USER www-data
 
 # Copy composer dependencies
 COPY --from=composer /app/vendor ./vendor
