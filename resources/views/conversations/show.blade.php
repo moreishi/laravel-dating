@@ -25,7 +25,7 @@
                     <form hx-post="{{ route('messages.store', $conversation->id) }}"
                           hx-target="#messages"
                           hx-swap="beforeend"
-                          hx-on:after-request="this.reset(); document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">
+                          id="message-form">
                         @csrf
                         <div class="flex gap-3">
                             <textarea name="content" rows="1" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-rose-500 focus:ring-rose-500" placeholder="{{ __('Type your message...') }}" required maxlength="2000"></textarea>
@@ -55,6 +55,15 @@
                     }
                 });
             }
+
+            document.addEventListener('htmx:afterRequest', function (e) {
+                if (e.detail.target && e.detail.target.id === 'messages') {
+                    const input = document.querySelector('form textarea[name="content"]');
+                    if (input) input.value = '';
+                    const msgDiv = document.getElementById('messages');
+                    if (msgDiv) msgDiv.scrollTop = msgDiv.scrollHeight;
+                }
+            });
         });
     </script>
 </x-app-layout>
