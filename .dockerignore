@@ -1,0 +1,55 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE / Editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# DDEV
+.ddev
+
+# Environment files
+.env
+.env.*
+!.env.docker
+
+# Node modules (built in Docker)
+node_modules
+
+# Storage (mounted as volume)
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+
+# Bootstrap cache
+bootstrap/cache/*
+
+# Build artifacts
+public/build
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Tests
+tests/
+phpunit.xml
+phpunit.xml.dist
+
+# Dev dependencies
+composer.lock
+
+# Documentation
+*.md
+LICENSE
