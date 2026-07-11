@@ -43,7 +43,7 @@ COPY . .
 COPY --from=assets /app/public/build ./public/build
 
 # Set permissions before cache generation
-RUN chown -R 9999:9999 storage bootstrap/cache \
+RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 # Generate optimized caches (as root, then switch to www-data for runtime)
