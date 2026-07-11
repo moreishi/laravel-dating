@@ -20,6 +20,11 @@
                         @if ($profile->bio)
                             <p class="text-gray-700 mt-3 line-clamp-3">{{ $profile->bio }}</p>
                         @endif
+                        <div class="mt-4">
+                            <span class="inline-flex items-center px-4 py-2 bg-rose-600 text-white rounded-md text-sm font-medium">
+                                {{ __('View Profile') }}
+                            </span>
+                        </div>
                     </a>
                 @empty
                     <div class="col-span-full text-center text-gray-500 py-12">
