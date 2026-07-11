@@ -26,6 +26,9 @@ LABEL maintainer="LaraDate"
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
+ENV DB_CONNECTION=mysql
+ENV DB_HOST=db
+ENV DB_PORT=3306
 
 WORKDIR /var/www/html
 
