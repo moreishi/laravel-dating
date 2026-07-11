@@ -29,26 +29,27 @@ ENV APP_DEBUG=false
 
 WORKDIR /var/www/html
 
-# Install PHP extensions (switch to root for install-php-extensions)
+# Install PHP extensions
 USER root
 RUN install-php-extensions pdo_mysql bcmath gd intl zip
-USER www-data
 
 # Copy composer dependencies
 COPY --from=composer /app/vendor ./vendor
 
 # Copy application source
-COPY --chown=9999:9999 . .
+COPY . .
 
 # Copy built assets
-COPY --from=assets --chown=9999:9999 /app/public/build ./public/build
+COPY --from=assets /app/public/build ./public/build
+
+# Set permissions before cache generation
+RUN chown -R 9999:9999 storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+USER www-data
 
 # Generate optimized caches
 RUN php artisan optimize --no-interaction
-
-# Set permissions
-RUN chown -R 9999:9999 storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 80 443
 
