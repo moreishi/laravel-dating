@@ -45,6 +45,17 @@
             if (messages) {
                 messages.scrollTop = messages.scrollHeight;
             }
+
+            const textarea = document.querySelector('form textarea[name="content"]');
+            const form = document.querySelector('form');
+            if (textarea && form) {
+                textarea.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        form.requestSubmit();
+                    }
+                });
+            }
         });
     </script>
 </x-app-layout>
