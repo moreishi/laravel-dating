@@ -46,10 +46,10 @@ COPY --from=assets /app/public/build ./public/build
 RUN chown -R 9999:9999 storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-USER www-data
-
-# Generate optimized caches
+# Generate optimized caches (as root, then switch to www-data for runtime)
 RUN php artisan optimize --no-interaction
+
+USER www-data
 
 EXPOSE 80 443
 
