@@ -15,28 +15,21 @@
             <div class="bg-white rounded-lg shadow">
                 <div id="messages" class="p-6 space-y-4 max-h-96 overflow-y-auto">
                     @forelse ($messages as $message)
-                        <div class="flex {{ $message->user_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
-                            <div class="max-w-lg {{ $message->user_id === auth()->id() ? 'bg-rose-50 text-gray-900' : 'bg-gray-50 text-gray-900' }} rounded-lg px-4 py-2">
-                                <p class="text-sm">{{ $message->content }}</p>
-                                <p class="text-xs text-gray-500 mt-1">{{ $message->created_at->diffForHumans() }}</p>
-                            </div>
-                        </div>
+                        @include('conversations.partials.message', ['message' => $message])
                     @empty
                         <p class="text-center text-gray-500 py-8">{{ __('No messages yet. Start the conversation!') }}</p>
                     @endforelse
                 </div>
 
                 <div class="border-t border-gray-200 p-6">
-                    <form action="{{ route('messages.store', $conversation->id) }}"
-                          method="POST"
-                          hx-post="{{ route('messages.store', $conversation->id) }}"
+                    <form hx-post="{{ route('messages.store', $conversation->id) }}"
                           hx-target="#messages"
                           hx-swap="beforeend"
-                          hx-on::after-request="this.reset()">
+                          id="message-form">
                         @csrf
                         <div class="flex gap-3">
                             <textarea name="content" rows="1" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-rose-500 focus:ring-rose-500" placeholder="{{ __('Type your message...') }}" required maxlength="2000"></textarea>
-                            <button type="submit" class="px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600 font-medium self-end">
+                            <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 font-medium self-end">
                                 {{ __('Send') }}
                             </button>
                         </div>
@@ -52,6 +45,25 @@
             if (messages) {
                 messages.scrollTop = messages.scrollHeight;
             }
+
+            const textarea = document.querySelector('form textarea[name="content"]');
+            if (textarea) {
+                textarea.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        document.querySelector('form button[type="submit"]').click();
+                    }
+                });
+            }
+
+            document.addEventListener('htmx:afterRequest', function (e) {
+                if (e.detail.target && e.detail.target.id === 'messages') {
+                    const input = document.querySelector('form textarea[name="content"]');
+                    if (input) input.value = '';
+                    const msgDiv = document.getElementById('messages');
+                    if (msgDiv) msgDiv.scrollTop = msgDiv.scrollHeight;
+                }
+            });
         });
     </script>
 </x-app-layout>

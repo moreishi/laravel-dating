@@ -4,7 +4,6 @@ namespace App\Actions;
 
 use App\Interfaces\ConversationRepositoryInterface;
 use App\Interfaces\MessageRepositoryInterface;
-use App\Models\Conversation;
 use App\Models\Message;
 
 class SendMessageAction

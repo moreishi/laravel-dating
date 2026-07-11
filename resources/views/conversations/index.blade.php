@@ -37,7 +37,7 @@
                     <div class="text-center text-gray-500 py-12">
                         {{ __('No conversations yet.') }}
                         <div class="mt-2">
-                            <a href="{{ route('profiles.index') }}" class="text-rose-500 hover:text-rose-600 font-medium">
+                            <a href="{{ route('profiles.index') }}" class="text-rose-600 hover:text-rose-700 font-medium">
                                 {{ __('Browse profiles to start chatting') }}
                             </a>
                         </div>
