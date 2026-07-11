@@ -22,10 +22,10 @@
                 </div>
 
                 <div class="border-t border-gray-200 p-6">
-                    <form action="{{ route('messages.store', $conversation->id) }}" hx-post="{{ route('messages.store', $conversation->id) }}"
+                    <form hx-post="{{ route('messages.store', $conversation->id) }}"
                           hx-target="#messages"
                           hx-swap="beforeend"
-                          hx-on::after-request="this.reset(); document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">
+                          hx-on:after-request="this.reset(); document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">
                         @csrf
                         <div class="flex gap-3">
                             <textarea name="content" rows="1" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-rose-500 focus:ring-rose-500" placeholder="{{ __('Type your message...') }}" required maxlength="2000"></textarea>
@@ -47,12 +47,11 @@
             }
 
             const textarea = document.querySelector('form textarea[name="content"]');
-            const form = document.querySelector('form');
-            if (textarea && form) {
+            if (textarea) {
                 textarea.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        form.requestSubmit();
+                        document.querySelector('form button[type="submit"]').click();
                     }
                 });
             }
