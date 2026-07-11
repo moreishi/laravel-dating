@@ -22,7 +22,7 @@
                 </div>
 
                 <div class="border-t border-gray-200 p-6">
-                    <form hx-post="{{ route('messages.store', $conversation->id) }}"
+                    <form action="{{ route('messages.store', $conversation->id) }}" hx-post="{{ route('messages.store', $conversation->id) }}"
                           hx-target="#messages"
                           hx-swap="beforeend"
                           hx-on::after-request="this.reset(); document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">
