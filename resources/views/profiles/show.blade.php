@@ -8,7 +8,10 @@
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex-shrink-0 w-20 h-20 rounded-full bg-rose-100 flex items-center justify-center">
+                        <span class="text-3xl font-semibold text-rose-600">{{ strtoupper(substr($profile->name, 0, 1)) }}</span>
+                    </div>
                     <div>
                         <h3 class="text-2xl font-bold text-gray-900">{{ $profile->name }}</h3>
                         <p class="text-gray-600 mt-1">
