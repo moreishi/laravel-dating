@@ -1,4 +1,20 @@
 services:
+  # ── Reverse Proxy (Caddy — auto HTTPS) ────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: laradate-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - laradate
+    depends_on:
+      - app
+
   # ── Application (nginx + PHP-FPM) ─────────────────────────────
   app:
     build:
@@ -6,8 +22,6 @@ services:
       dockerfile: Dockerfile
     container_name: laradate-app
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:80"
     environment:
       APP_NAME: "${APP_NAME:-LaraDate}"
       APP_ENV: production
@@ -135,6 +149,8 @@ volumes:
   storage:
     driver: local
   dbdata:
+    driver: local
+  caddy_data:
     driver: local
   # redisdata:
   #   driver: local
