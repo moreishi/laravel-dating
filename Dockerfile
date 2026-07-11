@@ -49,12 +49,14 @@ COPY --from=assets /app/public/build ./public/build
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Generate optimized caches (as root, then switch to www-data for runtime)
-RUN php artisan optimize --no-interaction
+# Cache views, routes, events at build time (config cached at runtime to pick up env vars)
+RUN php artisan view:cache --no-interaction \
+    && php artisan route:cache --no-interaction \
+    && php artisan event:cache --no-interaction
 
 USER www-data
 
 EXPOSE 80 443
 
 HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
-    CMD curl -f http://localhost/up || exit 1
+    CMD curl -f http://localhost:8080/healthcheck || exit 1
