@@ -4,6 +4,8 @@
 
 LaraDate is a Laravel 13 dating application with profile browsing, conversations, and real-time messaging. This guide covers deploying to production using Docker.
 
+Live at: **https://laradate.belzacia.com**
+
 ### Key Features
 
 - User registration & authentication (Breeze Blade)
@@ -95,11 +97,12 @@ docker compose -f docker-compose.prod.yml run --rm app php artisan key:generate 
 # 5. Start all services
 docker compose -f docker-compose.prod.yml up -d --build
 
-# 6. Run migrations
+# 6. Run migrations with seed data
 docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+docker compose -f docker-compose.prod.yml exec app php artisan db:seed --force
 
 # 7. Verify
-curl http://localhost:8080/up
+curl http://localhost:8081/healthcheck
 ```
 
 ### Project Docker Files
@@ -110,30 +113,33 @@ curl http://localhost:8080/up
 | `docker-compose.prod.yml` | Full stack: app, queue, scheduler, MariaDB |
 | `.dockerignore` | Excludes dev files from the build context |
 | `.env.docker` | Docker environment template |
-| `nginx.conf` | Production nginx configuration |
+| `nginx.conf` | Base nginx configuration |
 
 ### Dockerfile Breakdown
 
 ```
-┌─────────────────────────────────────────────┐
-│ Stage 1: node:22-alpine (assets)            │
-│   npm install → npm run build               │
-├─────────────────────────────────────────────┤
-│ Stage 2: composer:2 (dependencies)          │
-│   composer install --no-dev --optimize      │
-├─────────────────────────────────────────────┤
-│ Stage 3: serversideup/php:8.4-fpm-nginx     │
-│   Copy vendor + source + built assets       │
-│   php artisan optimize                      │
-│   Set permissions, healthcheck              │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│ Stage 1: node:22-alpine (assets)                    │
+│   npm install → npm run build                       │
+├─────────────────────────────────────────────────────┤
+│ Stage 2: composer:2 (dependencies)                  │
+│   composer install --no-dev --optimize              │
+│   (fakerphp/faker in require for seeding)           │
+├─────────────────────────────────────────────────────┤
+│ Stage 3: serversideup/php:8.4-fpm-nginx             │
+│   USER root → install-php-extensions               │
+│   Copy vendor + source + built assets               │
+│   chown storage to www-data                         │
+│   php artisan view:cache + route:cache + event:cache│
+│   HEALTHCHECK localhost:8080/healthcheck            │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### Services
 
 | Service | Container | Purpose |
 |---------|-----------|---------|
-| `app` | `laradate-app` | nginx + PHP-FPM, serves the application |
+| `app` | `laradate-app` | nginx + PHP-FPM, serves the application on port 8081 |
 | `queue` | `laradate-queue` | Background job processor |
 | `scheduler` | `laradate-scheduler` | Laravel task scheduler (`schedule:work`) |
 | `db` | `laradate-db` | MariaDB 10.11 database |
@@ -142,9 +148,9 @@ curl http://localhost:8080/up
 
 | Host Port | Container Port | Service |
 |-----------|---------------|---------|
-| `8080` | `80` | nginx (app) |
+| `8081` | `80` | nginx (app) |
 
-Change the host port by setting `APP_PORT` in `.env`.
+The app container exposes nginx on port `80` internally. The host maps it to `8081`. A host-level nginx reverse proxy (see HTTPS section) forwards `laradate.belzacia.com:443` → `127.0.0.1:8081`.
 
 ---
 
@@ -156,9 +162,9 @@ Change the host port by setting `APP_PORT` in `.env`.
 # ── Application ──
 APP_NAME=LaraDate
 APP_ENV=production
-APP_KEY=base64:xxxxxxxxxxxxxxxx   # Generated with: php artisan key:generate --show
+APP_KEY=base64:tLbVM2W6VMdxNoMFM6pewsEkGaa9GadpIHuniA4uMHo=
 APP_DEBUG=false
-APP_URL=https://your-domain.com
+APP_URL=https://laradate.belzacia.com
 
 # ── Database ──
 DB_DATABASE=laradate
@@ -166,13 +172,13 @@ DB_USERNAME=laradate
 DB_PASSWORD=your-strong-db-password
 
 # ── Docker ──
-APP_PORT=8080
+APP_PORT=8081
 DB_ROOT_PASSWORD=your-strong-root-password
 
 # ── Session ──
 SESSION_DRIVER=database
 SESSION_LIFETIME=120
-SESSION_SECURE_COOKIE=true     # Set to true with HTTPS
+SESSION_SECURE_COOKIE=true
 
 # ── Cache & Queue ──
 CACHE_STORE=database
@@ -203,12 +209,17 @@ FILESYSTEM_DISK=local
 | `APP_ENV` | `production` | Never change in production |
 | `APP_DEBUG` | `false` | Never `true` in production |
 | `APP_KEY` | *(generated)* | Required for encryption |
-| `APP_URL` | `http://localhost` | Your production domain |
-| `APP_PORT` | `8080` | Host port for nginx |
+| `APP_URL` | `http://localhost` | Must match HTTPS domain for asset URLs |
+| `APP_PORT` | `8081` | Host port for nginx container |
 | `DB_PASSWORD` | *(required)* | Strong password for app user |
 | `DB_ROOT_PASSWORD` | *(required)* | Strong password for root |
-| `SESSION_SECURE_COOKIE` | `false` | Set `true` with HTTPS |
+| `SESSION_SECURE_COOKIE` | `true` | Must be `true` with HTTPS |
 | `LOG_LEVEL` | `warning` | `debug` for troubleshooting |
+
+### Important Configuration Notes
+
+- **Trusted Proxies**: `bootstrap/app.php` includes `$middleware->trustProxies(at: '*')` so that `asset()` and `url()` helpers generate HTTPS URLs when behind a TLS-terminating reverse proxy.
+- **Faker in Production**: `fakerphp/faker` is in the `require` section of `composer.json` (not `require-dev`) so that seeders can run in production environments.
 
 ---
 
@@ -226,8 +237,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 # Run migrations
 docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
 
+# Seed database (optional)
+docker compose -f docker-compose.prod.yml exec app php artisan db:seed --force
+
 # Rebuild caches
-docker compose -f docker-compose.prod.yml exec app php artisan optimize
+docker compose -f docker-compose.prod.yml exec -u root app php artisan optimize
 ```
 
 ### Automated Deploy (GitHub Actions)
@@ -239,9 +253,9 @@ The repository includes `.github/workflows/deploy.yml`. To use it:
 | Secret | Value |
 |--------|-------|
 | `SSH_PRIVATE_KEY` | Your server SSH private key |
-| `SERVER_HOST` | Server IP or hostname |
-| `SERVER_USER` | SSH username (e.g., `deploy`) |
-| `DEPLOY_PATH` | Path to the app on the server |
+| `SERVER_HOST` | Server IP or hostname (`62.169.22.255`) |
+| `SERVER_USER` | SSH username (`root`) |
+| `DEPLOY_PATH` | Path to the app on the server (`/var/www/laradate`) |
 
 2. **Push to `main`** — the workflow builds, tests, and deploys automatically.
 
@@ -266,53 +280,93 @@ docker image prune -f
 
 ---
 
-## HTTPS with Traefik / Caddy
+## HTTPS with Host nginx + Let's Encrypt
 
-### Option A: Caddy Reverse Proxy
+This project does **not** use an in-container reverse proxy (Caddy/Traefik). Instead, the host machine runs nginx with Let's Encrypt SSL, proxying requests to the Docker container.
 
-Add a Caddy service to `docker-compose.prod.yml`:
+### Host nginx Configuration
 
-```yaml
-  caddy:
-    image: caddy:2-alpine
-    container_name: laradate-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-    depends_on:
-      - app
-    networks:
-      - laradate
+The production server (`62.169.22.255`) has nginx installed on the host, configured at `/etc/nginx/sites-enabled/laradate`:
 
-volumes:
-  caddy_data:
-  caddy_config:
-```
+```nginx
+server {
+    listen 80;
+    server_name laradate.belzacia.com;
+    return 301 https://$server_name$request_uri;
+}
 
-Create `Caddyfile`:
+server {
+    listen 443 ssl http2;
+    server_name laradate.belzacia.com;
 
-```
-your-domain.com {
-    reverse_proxy app:80
+    ssl_certificate /etc/letsencrypt/live/laradate.belzacia.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/laradate.belzacia.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
 
-### Option B: Traefik
+### Container nginx Configuration
 
-Add labels to the `app` service:
+The container's nginx configuration is at `conf.d/default.conf`, which is a symlink to `sites-available/ssl-off`:
 
-```yaml
-  app:
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.laradate.rule=Host(`your-domain.com`)"
-      - "traefik.http.routers.laradate.entrypoints=websecure"
-      - "traefik.http.routers.laradate.tls.certresolver=myresolver"
+```
+server {
+    listen 80;
+    server_name _;
+    root /var/www/html/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+```
+
+### Setting Up Host nginx
+
+```bash
+# Install nginx
+apt update && apt install -y nginx certbot python3-certbot-nginx
+
+# Create site config
+nano /etc/nginx/sites-available/laradate
+
+# Enable site
+ln -s /etc/nginx/sites-available/laradate /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+
+# Obtain SSL certificate
+certbot --nginx -d laradate.belzacia.com
+
+# Auto-renewal is configured by certbot via systemd timer
+certbot renew --dry-run
 ```
 
 ---
@@ -343,7 +397,7 @@ docker compose -f docker-compose.prod.yml exec app php artisan migrate:rollback 
 # View migration status
 docker compose -f docker-compose.prod.yml exec app php artisan migrate:status
 
-# Seed with pre-configured accounts (local only)
+# Seed with pre-configured accounts
 docker compose -f docker-compose.prod.yml exec app php artisan db:seed --force
 
 # View database stats
@@ -391,7 +445,7 @@ chmod +x /usr/local/bin/laradate-backup.sh
 
 ```bash
 # Check app health
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/up
+curl -s -o /dev/null -w "%{http_code}" https://laradate.belzacia.com/healthcheck
 # Expected: 200
 
 # Check container health
@@ -424,7 +478,7 @@ docker compose -f docker-compose.prod.yml logs --tail=100 app
 docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear
 
 # Rebuild all caches
-docker compose -f docker-compose.prod.yml exec app php artisan optimize
+docker compose -f docker-compose.prod.yml exec -u root app php artisan optimize
 
 # Run tests
 docker compose -f docker-compose.prod.yml exec app php artisan test
@@ -453,23 +507,24 @@ docker compose -f docker-compose.prod.yml restart queue
 
 Run through this before going live:
 
-- [ ] **`APP_ENV=production`** — set in `.env`
-- [ ] **`APP_DEBUG=false`** — prevents stack trace leaks
-- [ ] **`APP_KEY` generated** — `php artisan key:generate --show`
-- [ ] **`SESSION_SECURE_COOKIE=true`** — HTTPS only
-- [ ] **Strong database passwords** — both `DB_PASSWORD` and `DB_ROOT_PASSWORD`
-- [ ] **Rate limiting active** — `throttle:5,1` on conversations, `throttle:10,1` on messages
-- [ ] **CSRF protection** — all POST forms include `@csrf`
-- [ ] **HTTPS enabled** — Caddy/Traefik/Cloudflare
-- [ ] **`.env` not in container** — excluded via `.dockerignore`
-- [ ] **Storage volume mounted** — `storage:/var/www/html/storage`
-- [ ] **Non-root container user** — `serversideup/php` runs as UID 9999
-- [ ] **Health check configured** — `HEALTHCHECK` in Dockerfile
-- [ ] **Queue worker running** — `queue` service auto-restarts
-- [ ] **Database backup automated** — cron job or external service
-- [ ] **SSL/TLS active** — Let's Encrypt or Cloudflare
+- [x] **`APP_ENV=production`** — set in `.env`
+- [x] **`APP_DEBUG=false`** — prevents stack trace leaks
+- [x] **`APP_KEY` generated** — `php artisan key:generate --show`
+- [x] **`SESSION_SECURE_COOKIE=true`** — HTTPS only
+- [x] **Strong database passwords** — both `DB_PASSWORD` and `DB_ROOT_PASSWORD`
+- [x] **Rate limiting active** — `throttle:5,1` on conversations, `throttle:10,1` on messages
+- [x] **CSRF protection** — all POST forms include `@csrf`
+- [x] **HTTPS enabled** — host nginx with Let's Encrypt
+- [x] **Trusted proxies configured** — `bootstrap/app.php` trusts `*`
+- [x] **`.env` not in container** — excluded via `.dockerignore`
+- [x] **Storage volume mounted** — `storage:/var/www/html/storage`
+- [x] **Non-root container user** — `serversideup/php` runs as UID 9999; PHP extensions installed as root then dropped back
+- [x] **Health check configured** — `HEALTHCHECK` in Dockerfile
+- [x] **Queue worker running** — `queue` service auto-restarts
+- [x] **Database backup automated** — cron job or external service
+- [x] **SSL/TLS active** — Let's Encrypt on host
 - [ ] **Fail2ban on host** — protect SSH and exposed ports
-- [ ] **Firewall rules** — only ports 80, 443, and SSH open
+- [x] **Firewall rules** — only ports 80, 443, and SSH open
 
 ---
 
@@ -489,8 +544,9 @@ Run through this before going live:
 | Messages not sending | Queue not running | `docker compose restart queue` |
 | DB connection refused | Container not ready | `docker compose ps` — check `db` health |
 | Vite manifest missing | Assets not built | Rebuild: `docker compose up -d --build` |
-| Permission denied | Volume ownership | `docker compose exec app chown -R 9999:9999 storage` |
+| Permission denied | Volume ownership | `docker compose exec app chown -R www-data:www-data storage` |
 | Container won't start | Port conflict | Change `APP_PORT` in `.env` |
+| Asset URLs show `http://` | Trusted proxies not set | Check `bootstrap/app.php` has `trustProxies(at: '*')` |
 
 ### Diagnostics
 
@@ -502,7 +558,7 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=50 app
 
 # Health check
-docker compose -f docker-compose.prod.yml exec app curl -s http://localhost/up
+curl -s https://laradate.belzacia.com/healthcheck
 
 # Database connection
 docker compose -f docker-compose.prod.yml exec app php artisan db:monitor
@@ -554,7 +610,7 @@ push to main
     → checkout code
     → build Docker image (with cache)
     → run tests inside container
-    → SSH to production server
+    → SSH to production server (62.169.22.255)
     → pull code, rebuild containers
     → run migrations
     → optimize caches
@@ -566,9 +622,9 @@ push to main
 | Secret | Description |
 |--------|-------------|
 | `SSH_PRIVATE_KEY` | SSH private key for server access |
-| `SERVER_HOST` | Server IP or domain |
-| `SERVER_USER` | SSH username |
-| `DEPLOY_PATH` | Absolute path to app directory |
+| `SERVER_HOST` | `62.169.22.255` |
+| `SERVER_USER` | `root` |
+| `DEPLOY_PATH` | `/var/www/laradate` |
 
 ---
 
